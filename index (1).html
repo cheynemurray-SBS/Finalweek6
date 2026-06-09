@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BUAN 631 · Section 6 · Multiple Variables Inference</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --mar: #570C0F;
+    --mar2: #7a1215;
+    --gld: #C8A84B;
+    --gld2: #e8c97a;
+    --gldbg: #faf4e3;
+    --gldbrd: #d4b96a;
+    --text: #1a1a1a;
+    --muted: #555;
+    --light: #f5f5f5;
+    --border: #ddd;
+    --white: #fff;
+    --radius: 6px;
+    --code-bg: #f0f0f0;
+    --green: #1a6b2e;
+    --green-bg: #e8f5ec;
+    --red: #8b0000;
+    --red-bg: #fdf0f0;
+    --blue: #0d4a7a;
+    --blue-bg: #e8f2fb;
+    --amber: #7a4a00;
+    --amber-bg: #fef6e4;
+  }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text);
+    background: #f8f8f6;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ── */
+  .site-header {
+    background: var(--mar);
+    color: white;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .header-brand { display: flex; align-items: center; gap: 14px; }
+  .header-logo {
+    width: 34px; height: 34px;
+    background: var(--gld);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--mar);
+  }
+  .header-title { font-size: 14px; font-weight: 600; color: white; }
+  .header-sub { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 1px; }
+  .header-badge {
+    background: var(--gld);
+    color: var(--mar);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+  }
+
+  .page-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: calc(100vh - 56px);
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: white;
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+  .sidebar-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 1.25rem 0.5rem;
+    margin-top: 1rem;
+  }
+  .sidebar-section-label:first-child { margin-top: 0; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 1.25rem;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: var(--light); color: var(--text); }
+  .nav-item.active {
+    background: #fdf5f5;
+    color: var(--mar);
+    border-left-color: var(--mar);
+    font-weight: 600;
+  }
+  .nav-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    color: var(--muted);
+  }
+  .nav-item.active .nav-num { background: var(--mar); color: white; }
+  .nav-item.done .nav-num { background: var(--green-bg); color: var(--green); }
+  .nav-check { color: var(--green); font-size: 13px; }
+  .sidebar-progress {
+    padding: 1.25rem 1.25rem 0;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+  }
+  .progress-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; }
+  .progress-fill { height: 100%; background: var(--mar); border-radius: 2px; transition: width 0.4s; }
+
+  /* ── Main content ── */
+  .main-content { padding: 2rem 2.5rem; }
+  .part-section { display: none; }
+  .part-section.active { display: block; }
+
+  .part-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid var(--border);
+    gap: 1rem;
+  }
+  .part-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gld);
+    margin-bottom: 4px;
+  }
+  .part-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--mar);
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+  .part-desc { font-size: 14px; color: var(--muted); }
+  .part-points {
+    background: var(--mar);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .scenario-box {
+    background: var(--blue-bg);
+    border: 1px solid #b8d4ef;
+    border-left: 4px solid var(--blue);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .scenario-box strong { color: var(--blue); }
+
+  /* ── Tab sub-navigation ── */
+  .tab-nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--mar); }
+  .tab-btn.active { color: var(--mar); border-bottom-color: var(--mar); font-weight: 600; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Stat cards ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+  .stat-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--mar); }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .stat-card.highlight { background: var(--mar); border-color: var(--mar); }
+  .stat-card.highlight .stat-label { color: rgba(255,255,255,0.7); }
+  .stat-card.highlight .stat-value { color: var(--gld); }
+  .stat-card.highlight .stat-sub { color: rgba(255,255,255,0.6); }
+
+  /* ── Result table ── */
+  .result-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 14px; }
+  .result-table th { text-align: left; padding: 8px 12px; background: var(--light); font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid var(--border); }
+  .result-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .result-table tr:last-child td { border-bottom: none; }
+  .result-table tr.decision td { font-weight: 700; color: var(--mar); background: #fdf5f5; }
+  .result-table .sig { color: var(--green); font-weight: 600; }
+  .result-table .ns { color: var(--muted); }
+  .result-table .reject { color: var(--green); font-weight: 700; }
+  .result-table .fail-reject { color: var(--amber); font-weight: 700; }
+
+  /* ── Code block ── */
+  .code-block {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+  }
+  .code-block .c-comment { color: #6c7086; }
+  .code-block .c-keyword { color: #cba6f7; }
+  .code-block .c-string { color: #a6e3a1; }
+  .code-block .c-num { color: #fab387; }
+  .code-block .c-func { color: #89b4fa; }
+  .code-block .c-var { color: #f38ba8; }
+  .code-block .c-highlight { color: var(--gld2); font-weight: 600; }
+
+  /* ── Insight / callout boxes ── */
+  .insight-box {
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    font-size: 14px;
+    line-height: 1.7;
+    border-left: 4px solid;
+  }
+  .insight-box.green { background: var(--green-bg); border-color: var(--green); color: #1a3d25; }
+  .insight-box.red { background: var(--red-bg); border-color: var(--red); color: #4a1010; }
+  .insight-box.amber { background: var(--amber-bg); border-color: #c87800; color: #4a2d00; }
+  .insight-box.blue { background: var(--blue-bg); border-color: var(--blue); color: #0a2f4a; }
+  .insight-box.gold { background: var(--gldbg); border-color: var(--gldbrd); color: #4a3300; }
+  .insight-box strong { font-weight: 700; }
+  .insight-title { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+
+  /* ── Interactive zone ── */
+  .interactive-zone {
+    background: var(--gldbg);
+    border: 1px solid var(--gldbrd);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .iz-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #7a5200;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .iz-title::before { content: '⚡'; }
+  .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .slider-row label { font-size: 13px; color: var(--muted); min-width: 160px; }
+  .slider-row input[type=range] { flex: 1; accent-color: var(--mar); }
+  .slider-val { font-size: 13px; font-weight: 700; color: var(--text); min-width: 64px; text-align: right; }
+  .result-display {
+    background: var(--mar);
+    color: white;
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+  }
+  .rd-label { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .rd-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .rd-value { font-size: 24px; font-weight: 700; color: var(--gld); }
+  .rd-decision { font-size: 13px; font-weight: 700; margin-top: 4px; }
+  .rd-decision.reject { color: #a6e3a1; }
+  .rd-decision.fail { color: #fab387; }
+
+  /* ── Chart wrappers ── */
+  .chart-wrap { position: relative; width: 100%; margin-bottom: 1rem; }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 6px; margin-bottom: 1rem; }
+  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+
+  /* ── Hypothesis block ── */
+  .hyp-block {
+    background: var(--code-bg);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    margin-bottom: 1rem;
+    border-left: 3px solid var(--mar);
+    color: var(--text);
+  }
+  .hyp-block .h0 { color: #0d4a7a; font-weight: 600; }
+  .hyp-block .ha { color: var(--green); font-weight: 600; }
+  .hyp-block .comment { color: var(--muted); }
+
+  /* ── Assumption cards ── */
+  .assumption-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+  .assumption-card { border-radius: var(--radius); padding: .875rem 1rem; border: 1px solid; font-size: 13px; }
+  .assumption-card .a-title { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .assumption-card .a-body { line-height: 1.5; }
+  .assumption-card.pass { background: var(--green-bg); border-color: #a0d4b0; color: #1a3d25; }
+  .assumption-card.warn { background: var(--amber-bg); border-color: #f0c060; color: #4a2d00; }
+  .assumption-card.fail { background: var(--red-bg); border-color: #f0b0b0; color: #4a1010; }
+
+  /* ── Number line / CI display ── */
+  .ci-display {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .ci-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+  .ci-track { position: relative; height: 24px; background: #eee; border-radius: 4px; margin: 8px 0; }
+  .ci-fill { position: absolute; height: 100%; background: var(--mar); border-radius: 4px; opacity: 0.25; }
+  .ci-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--mar); }
+  .ci-zero { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--muted); opacity: 0.5; }
+  .ci-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+
+  /* ── Quiz ── */
+  .quiz-block { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; }
+  .quiz-q { background: var(--light); padding: 1rem; font-size: 14px; font-weight: 500; color: var(--text); border-bottom: 1px solid var(--border); }
+  .quiz-q .q-num { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gld); display: block; margin-bottom: 4px; }
+  .quiz-opts { padding: .75rem; }
+  .quiz-opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: .625rem .875rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+    line-height: 1.5;
+    transition: background .12s;
+  }
+  .quiz-opt:hover { background: var(--light); }
+  .quiz-opt.correct { background: var(--green-bg); border-color: #7cc496; color: var(--green); pointer-events: none; }
+  .quiz-opt.incorrect { background: var(--red-bg); border-color: #e8a0a0; color: var(--red); pointer-events: none; }
+  .opt-letter {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--light);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .quiz-opt.correct .opt-letter { background: var(--green); color: white; border-color: var(--green); }
+  .quiz-opt.incorrect .opt-letter { background: var(--red); color: white; border-color: var(--red); }
+  .quiz-feedback {
+    padding: .875rem 1rem;
+    font-size: 13px;
+    line-height: 1.65;
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct { background: var(--green-bg); color: #1a3d25; }
+  .quiz-feedback.incorrect { background: var(--red-bg); color: #4a1010; }
+
+  /* ── Navigation buttons ── */
+  .part-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { background: var(--light); }
+  .nav-btn.primary { background: var(--mar); color: white; border-color: var(--mar); }
+  .nav-btn.primary:hover { background: var(--mar2); }
+  .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Comparison table ── */
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1.25rem; table-layout: fixed; }
+  .compare-table th { background: var(--mar); color: white; padding: 9px 12px; text-align: left; font-size: 12px; font-weight: 600; }
+  .compare-table th:first-child { background: var(--mar2); }
+  .compare-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  .compare-table tr:nth-child(even) td { background: #fafafa; }
+  .compare-table .checkmark { color: var(--green); font-weight: 700; }
+  .compare-table .crossmark { color: var(--red); }
+
+  /* ── Numbered steps ── */
+  .steps-list { list-style: none; margin-bottom: 1.25rem; }
+  .steps-list li {
+    display: flex;
+    gap: 1rem;
+    padding: .875rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .steps-list li:last-child { border-bottom: none; }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--mar);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-text strong { color: var(--mar); }
+
+  /* ── Contribution bar ── */
+  .contrib-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .contrib-label { font-size: 12px; color: var(--muted); min-width: 110px; }
+  .contrib-track { flex: 1; height: 14px; background: #eee; border-radius: 3px; overflow: hidden; }
+  .contrib-fill { height: 100%; border-radius: 3px; }
+  .contrib-val { font-size: 12px; font-weight: 700; min-width: 60px; text-align: right; }
+  .contrib-val.pos { color: var(--green); }
+  .contrib-val.neg { color: var(--red); }
+
+  /* ── Progress bar ── */
+  .prob-bar-wrap { margin: .75rem 0; }
+  .prob-bar-outer { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+  .prob-bar-inner { height: 100%; border-radius: 4px; transition: width .3s; }
+  .prob-bar-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* ── Confusion matrix ── */
+  .conf-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+  .cm-cell { padding: .875rem; border-radius: var(--radius); text-align: center; border: 1px solid; }
+  .cm-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .cm-value { font-size: 28px; font-weight: 700; }
+  .cm-note { font-size: 11px; margin-top: 3px; }
+  .cm-tp { background: var(--green-bg); border-color: #a0d4b0; color: var(--green); }
+  .cm-tn { background: var(--blue-bg); border-color: #a0c4e0; color: var(--blue); }
+  .cm-fp { background: var(--amber-bg); border-color: #f0c060; color: var(--amber); }
+  .cm-fn { background: var(--red-bg); border-color: #f0b0b0; color: var(--red); }
+
+  /* ── Red flags ── */
+  .flag-item {
+    display: flex;
+    gap: 1rem;
+    padding: .875rem;
+    border: 1px solid #f0b0b0;
+    border-radius: var(--radius);
+    background: var(--red-bg);
+    margin-bottom: 8px;
+  }
+  .flag-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+  .flag-title { font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 2px; }
+  .flag-body { font-size: 13px; color: #4a1010; line-height: 1.55; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .page-layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .main-content { padding: 1.25rem; }
+    .assumption-grid { grid-template-columns: 1fr; }
+    .conf-matrix { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-brand">
+    <div class="header-logo">U</div>
+    <div>
+      <div class="header-title">University of Redlands · School of Business</div>
+      <div class="header-sub">BUAN 631 · Business Analytics</div>
+    </div>
+  </div>
+  <div class="header-badge">Graduate · 100 pts</div>
+</header>
+
+<div class="page-layout">
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar" aria-label="Module sections">
+    <div class="sidebar-section-label">Module Sections</div>
+    <a class="nav-item active" onclick="showPart('part1')" href="#">
+      <span class="nav-num">1</span> Problem Mapping
+    </a>
+    <a class="nav-item" onclick="showPart('part2')" href="#">
+      <span class="nav-num">2</span> Multiple Linear Regression
+    </a>
+    <a class="nav-item" onclick="showPart('part3')" href="#">
+      <span class="nav-num">3</span> Logistic Regression
+    </a>
+    <a class="nav-item" onclick="showPart('part4')" href="#">
+      <span class="nav-num">4</span> Time-Series &amp; Forecasting
+    </a>
+    <a class="nav-item" onclick="showPart('part5')" href="#">
+      <span class="nav-num">5</span> Validating Prediction Models
+    </a>
+    <a class="nav-item" onclick="showPart('part6')" href="#">
+      <span class="nav-num">✓</span> Course Wrap-Up &amp; Quiz
+    </a>
+    <div class="sidebar-progress">
+      <div class="progress-label"><span>Progress</span><span id="prog-label">1 / 6</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:17%"></div></div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!--  PART 1 — Problem Mapping                                    -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <main class="main-content">
+  <section id="part1" class="part-section active">
+    <div class="part-header">
+      <div>
+        <div class="part-eyebrow">Part 1 · Section 6 · 15 Points</div>
+        <div class="part-title">Mapping the Problem Statement,<br>Analysis Techniques, and Variables</div>
+        <div class="part-desc">Choosing the right analytical method before touching any data.</div>
+      </div>
+      <div class="part-points">15 pts</div>
+    </div>
+
+    <div class="scenario-box">
+      <strong>Why this matters first:</strong> The most common analytical failure isn't a math error — it's choosing the wrong method. A manager who applies logistic regression to a continuous outcome, or runs a simple regression when the data is time-ordered, will produce confident-looking numbers that answer the wrong question. This section teaches you to read a business problem and select the appropriate technique before any analysis begins.
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showTab('p1','framework')">Decision Framework</button>
+      <button class="tab-btn" onclick="showTab('p1','variables')">Variable Types</button>
+      <button class="tab-btn" onclick="showTab('p1','mapping')">Problem Mapping</button>
+      <button class="tab-btn" onclick="showTab('p1','quiz')">Knowledge Check</button>
+    </div>
+
+    <div id="p1-framework" class="tab-panel active">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">Four diagnostic questions determine which inference technique is appropriate. Work through them in sequence for any new business problem.</p>
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span class="step-text"><strong>What is the outcome variable (Y)?</strong><br>Is it a continuous number (revenue, cost, units sold), a binary yes/no (churned, defaulted, purchased), or a count/proportion observed in categories? The outcome type is the primary filter.</span></li>
+        <li><span class="step-num">2</span><span class="step-text"><strong>How many predictor variables (X) do you have?</strong><br>One predictor → simple regression. Multiple simultaneous predictors → multiple regression or logistic regression. Knowing which variables matter equally is a key MLR insight: partial effects isolate each driver's contribution while holding all others constant.</span></li>
+        <li><span class="step-num">3</span><span class="step-text"><strong>Is the data collected over time in sequence?</strong><br>If observations are ordered in time and you expect past values to predict future ones, standard regression violates independence. Use time-series methods (ARIMA, ETS) that explicitly model temporal structure.</span></li>
+        <li><span class="step-num">4</span><span class="step-text"><strong>What decision will this analysis support?</strong><br>A predictive model (forecast next quarter) requires different validation than an explanatory model (what drives customer CLV). Define the decision before finalizing the technique — this determines which performance metric matters most.</span></li>
+      </ul>
+
+      <table class="compare-table">
+        <thead><tr><th>Business question</th><th>Outcome type</th><th>Right technique</th><th>Key output for managers</th></tr></thead>
+        <tbody>
+          <tr><td>How much will Q3 revenue be?</td><td>Continuous</td><td>Multiple linear regression</td><td>Predicted value + prediction interval</td></tr>
+          <tr><td>Will this customer churn?</td><td>Binary (yes/no)</td><td>Logistic regression</td><td>Probability score (0–1); threshold-based classification</td></tr>
+          <tr><td>What will demand be next month?</td><td>Sequential over time</td><td>ARIMA / time-series</td><td>Forecast + confidence interval by period</td></tr>
+          <tr><td>Does advertising spend drive sales more than discounts?</td><td>Continuous, multiple X</td><td>Multiple linear regression</td><td>Partial coefficients; relative effect sizes</td></tr>
+          <tr><td>Which loan applicants are high-default risk?</td><td>Binary</td><td>Logistic regression</td><td>Ranked probability list; confusion matrix at chosen threshold</td></tr>
+          <tr><td>How reliable is this predictive model before deployment?</td><td>Model performance</td><td>Validation framework (CV, holdout)</td><td>Test R², RMSE, AUC on held-out data</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="p1-variables" class="tab-panel">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">Variable classification determines what transformations and model families are valid. Misclassifying a variable is a fundamental error that can invalidate entire analyses.</p>
+      <table class="compare-table">
+        <thead><tr><th style="width:18%">Variable type</th><th style="width:25%">Description</th><th style="width:25%">Business examples</th><th style="width:32%">Modeling notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Continuous (interval/ratio)</strong></td><td>Any real number; differences meaningful; true zero possible</td><td>Revenue, temperature, distance, time in months</td><td>Use as-is in MLR. Log-transform if right-skewed (e.g., income).</td></tr>
+          <tr><td><strong>Binary (dichotomous)</strong></td><td>Exactly two values: 0/1, yes/no, true/false</td><td>Churned, defaulted, clicked, promoted</td><td>Outcome → logistic regression. As X in MLR: interpret as group difference (β = difference vs. reference group).</td></tr>
+          <tr><td><strong>Ordinal</strong></td><td>Ranked categories; gaps between ranks unequal</td><td>Satisfaction rating (1–5), credit tier (A/B/C)</td><td>Treat as numeric cautiously if scale is dense. Otherwise encode as dummies or use ordinal logistic regression.</td></tr>
+          <tr><td><strong>Nominal (categorical)</strong></td><td>Unordered categories</td><td>Region, industry, product line, payment method</td><td>Dummy-encode (k−1 binary variables per category). Reference category must be stated in interpretation.</td></tr>
+          <tr><td><strong>Time-ordered (sequential)</strong></td><td>Observations indexed by time; adjacent values correlated</td><td>Monthly sales, daily stock price, weekly demand</td><td>Do not shuffle. Use ARIMA, ETS, or SARIMAX. Standard regression violates independence.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="insight-box amber">
+        <div class="insight-title">⚠ Dummy variable trap</div>
+        If a categorical variable has k levels (e.g., 4 regions: NE, SE, MW, W), create k−1 dummy variables (3 dummies). Including all k creates perfect multicollinearity — the model cannot be estimated. Always drop one category as the <strong>reference group</strong> and interpret all other coefficients relative to it.
+      </div>
+    </div>
+
+    <div id="p1-mapping" class="tab-panel">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">Apply the framework to three real consulting scenarios. Identify Y, the predictor set, data structure, and correct technique.</p>
+
+      <div class="insight-box blue" style="margin-bottom:1.25rem">
+        <div class="insight-title">Scenario A — Pacific Rim Healthcare</div>
+        A regional hospital network wants to predict <strong>average patient length of stay (LOS in days)</strong> using: patient age (years), diagnosis severity score (1–5), insurance type (4 categories), and whether the admission was emergency vs. planned (binary). Data consists of 8,400 individual patient records, cross-sectional.<br><br>
+        <strong>Y:</strong> Continuous (days) · <strong>X count:</strong> 4 predictors (mixed types) · <strong>Structure:</strong> Cross-sectional, not time-ordered<br>
+        <strong>✓ Correct technique:</strong> Multiple linear regression. Diagnosis severity and insurance type need dummy encoding. Model produces an expected LOS with CI, and partial coefficients showing each factor's independent contribution to hospital resource planning.
+      </div>
+
+      <div class="insight-box gold" style="margin-bottom:1.25rem">
+        <div class="insight-title">Scenario B — CloudPeak SaaS</div>
+        A SaaS company wants to predict <strong>which customers will cancel their subscription next month</strong> (cancel = 1, retain = 0) using: tenure in months, number of support tickets in past 30 days, days since last login, plan tier (Basic/Pro), and team seat count.<br><br>
+        <strong>Y:</strong> Binary (0/1) · <strong>X count:</strong> 5 predictors · <strong>Structure:</strong> Cross-sectional per customer-month<br>
+        <strong>✓ Correct technique:</strong> Logistic regression. Output is a churn probability per customer. Classification threshold is a business decision (not defaulted to 50%) based on the asymmetric cost of missing a churner vs. contacting a loyal customer unnecessarily.
+      </div>
+
+      <div class="insight-box green">
+        <div class="insight-title">Scenario C — Harvest Foods Distribution</div>
+        A national grocery distributor needs to forecast <strong>monthly produce demand (units)</strong> over the next 6 months using 4 years of historical monthly demand data. The series shows clear upward trend and strong Q4 seasonality.<br><br>
+        <strong>Y:</strong> Sequential over time · <strong>X:</strong> Lagged values of Y; seasonal structure · <strong>Structure:</strong> Time-ordered monthly data<br>
+        <strong>✓ Correct technique:</strong> SARIMA (Seasonal ARIMA). First test stationarity (ADF), difference if needed. Identify AR/MA order via ACF/PACF. Output includes point forecasts and confidence intervals that widen appropriately as the horizon extends.
+      </div>
+    </div>
+
+    <div id="p1-quiz" class="tab-panel">
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 1 of 2</span>A regional bank wants to predict the <em>dollar amount</em> of annual mortgage default losses using: loan-to-value ratio (%), borrower FICO score, property type (4 types), loan origination year, and local unemployment rate. Which technique is appropriate and why?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p1q1')"><span class="opt-letter">A</span>Logistic regression — financial risk modeling always uses binary classification</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p1q1')"><span class="opt-letter">B</span>Multiple linear regression — the outcome is a continuous dollar amount and multiple predictors are specified simultaneously</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p1q1')"><span class="opt-letter">C</span>Time-series ARIMA — loan origination year makes this time-ordered data</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p1q1')"><span class="opt-letter">D</span>Both logistic and linear regression — run both and choose the one with higher R²</div>
+        </div>
+        <div class="quiz-feedback" id="p1q1">✓ Correct. The outcome is a continuous dollar amount (not a binary yes/no), which immediately rules out logistic regression. While loan origination year is in the dataset, it is used as a predictor variable, not as a sequential time-ordered structure — the observations are individual loans, not a time series of aggregate loss rates. Multiple linear regression is correct: it estimates each predictor's partial effect on dollar losses while holding all other factors constant. Property type (4 categories) requires 3 dummy variables with one category as the reference group. Note: if the question were "will this loan default? (yes/no)," logistic regression would be correct — the outcome type is the decisive factor.</div>
+      </div>
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 2 of 2</span>Your CFO asks you to predict next quarter's operating expenses for budget planning. You have 5 years of monthly expense data. A colleague suggests multiple linear regression using month number (1–60) as the only predictor. What is the fundamental problem with this approach?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p1q2')"><span class="opt-letter">A</span>No problem — month number is a valid continuous predictor in MLR</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p1q2')"><span class="opt-letter">B</span>The model needs more predictors — add headcount and revenue as X variables</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p1q2')"><span class="opt-letter">C</span>Sequential monthly observations are autocorrelated — MLR's independence assumption is violated, and the model ignores seasonal patterns that ARIMA would capture</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p1q2')"><span class="opt-letter">D</span>60 data points is too few for regression — collect at least 200 observations first</div>
+        </div>
+        <div class="quiz-feedback" id="p1q2">✓ Correct. This scenario has two compounding problems. First, consecutive monthly observations are not independent — this month's expenses are correlated with last month's, violating MLR's independence assumption. Running OLS on autocorrelated data produces biased standard errors and unreliable p-values. Second, a simple linear trend line (month number as X) completely ignores any seasonal structure in expenses — for example, if Q4 consistently runs 20% higher due to year-end vendor contracts, the linear model has no mechanism to capture that. ARIMA (specifically SARIMA for seasonal data) is designed for exactly this problem: it models the temporal autocorrelation structure and seasonal periodicity jointly. The correct approach: test stationarity with ADF, examine ACF/PACF for lag structure, identify seasonal period (12 for monthly), and fit a SARIMA model that produces forecasts with appropriate confidence intervals.</div>
+      </div>
+    </div>
+
+    <div class="part-nav">
+      <button class="nav-btn" disabled>← Previous</button>
+      <button class="nav-btn primary" onclick="showPart('part2')">Next: Multiple Linear Regression →</button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!--  PART 2 — Multiple Linear Regression                         -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section id="part2" class="part-section">
+    <div class="part-header">
+      <div>
+        <div class="part-eyebrow">Part 2 · Section 6 · 25 Points</div>
+        <div class="part-title">Multiple Linear Regression Analysis</div>
+        <div class="part-desc">Isolating the independent effect of each driver on a continuous business outcome.</div>
+      </div>
+      <div class="part-points">25 pts</div>
+    </div>
+
+    <div class="scenario-box">
+      <strong>Business scenario:</strong> You are VP of Revenue Strategy at <em>Precision Retail Co.</em>, a mid-market chain with 48 stores. Your analytics team modeled weekly store revenue ($) using 104 weeks of data. Predictors include advertising spend ($), discount depth (%), foot traffic (store visits), regional unemployment rate (%), and a binary holiday-week indicator. The model uses <em>n = 4,992</em> store-weeks.
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showTab('p2','concept')">Concept</button>
+      <button class="tab-btn" onclick="showTab('p2','output')">Model Output</button>
+      <button class="tab-btn" onclick="showTab('p2','assumptions')">Assumptions</button>
+      <button class="tab-btn" onclick="showTab('p2','simulator')">Live Simulator</button>
+      <button class="tab-btn" onclick="showTab('p2','insight')">Business Insight</button>
+      <button class="tab-btn" onclick="showTab('p2','quiz')">Knowledge Check</button>
+    </div>
+
+    <div id="p2-concept" class="tab-panel active">
+      <p style="font-size:14px;margin-bottom:1rem;color:var(--muted)">MLR fits a hyperplane through n-dimensional space that minimizes the sum of squared residuals. Each coefficient β represents a partial effect — the change in Y for a one-unit increase in Xᵢ, holding all other predictors constant.</p>
+      <div class="hyp-block">
+<span class="h0">Ŷ = β₀ + β₁X₁ + β₂X₂ + ... + βₖXₖ + ε</span>
+
+<span class="comment">β₀ = intercept (predicted Y when all X = 0)</span>
+<span class="comment">βᵢ = partial slope: ΔY per unit ΔXᵢ, holding all Xⱼ constant</span>
+<span class="comment">ε  = residual error (unexplained variation)</span>
+
+<span class="ha">H₀: βᵢ = 0    # Variable i has no effect on Y</span>
+<span class="ha">Hₐ: βᵢ ≠ 0    # Variable i has a significant effect on Y</span>
+<span class="comment">
+# Estimation via OLS — minimizes Σ(Yᵢ − Ŷᵢ)²
+from sklearn.linear_model import LinearRegression
+model.fit(X_train, y_train)
+coefficients = model.coef_
+r_squared   = model.score(X_test, y_test)</span>
+      </div>
+      <div class="insight-box blue">
+        <div class="insight-title">Why "partial" effects matter in management</div>
+        In a simple regression of revenue on ad spend, the β coefficient absorbs all other things correlated with spending — seasonality, competitor behavior, economic conditions. In MLR that includes those variables, β<sub>ad spend</sub> becomes a cleaner, more defensible estimate of advertising's <em>independent</em> contribution. This is ceteris paribus reasoning — the statistical equivalent of holding everything else constant while you test one lever.
+      </div>
+    </div>
+
+    <div id="p2-output" class="tab-panel">
+      <div class="stat-grid">
+        <div class="stat-card highlight"><div class="stat-label">R²</div><div class="stat-value">0.862</div><div class="stat-sub">86.2% variance explained</div></div>
+        <div class="stat-card highlight"><div class="stat-label">Adj. R²</div><div class="stat-value">0.849</div><div class="stat-sub">Penalized for predictors</div></div>
+        <div class="stat-card highlight"><div class="stat-label">RMSE</div><div class="stat-value">$4,210</div><div class="stat-sub">Avg prediction error</div></div>
+        <div class="stat-card highlight"><div class="stat-label">F-test p</div><div class="stat-value">&lt;.001</div><div class="stat-sub">Model is significant</div></div>
+      </div>
+
+      <table class="result-table">
+        <thead><tr><th>Variable</th><th>β coeff.</th><th>Std err</th><th>t-stat</th><th>p-value</th><th>95% CI</th><th>Managerial interpretation</th></tr></thead>
+        <tbody>
+          <tr><td>Intercept</td><td>$38,420</td><td>2,840</td><td>13.53</td><td class="sig">&lt;.001</td><td>[$32.9k, $43.9k]</td><td>Base weekly revenue</td></tr>
+          <tr><td>Ad spend ($)</td><td class="sig">+$4.10</td><td>0.38</td><td>10.79</td><td class="sig">&lt;.001</td><td>[$3.36, $4.84]</td><td>Each $1 in ads → +$4.10 revenue</td></tr>
+          <tr><td>Discount depth (%)</td><td class="sig">+$1,580</td><td>210</td><td>7.52</td><td class="sig">&lt;.001</td><td>[$1.17k, $1.99k]</td><td>Each 1pt discount → +$1,580 gross rev</td></tr>
+          <tr><td>Foot traffic (visits)</td><td class="sig">+$0.71</td><td>0.07</td><td>10.14</td><td class="sig">&lt;.001</td><td>[$0.57, $0.85]</td><td>Each visitor → +71¢ revenue</td></tr>
+          <tr><td>Unemployment rate (%)</td><td class="sig">−$820</td><td>190</td><td>−4.32</td><td class="sig">&lt;.001</td><td>[−$1.19k, −$450]</td><td>Each 1pt rise → −$820 (macro risk)</td></tr>
+          <tr><td>Holiday week (1/0)</td><td class="sig">+$12,400</td><td>1,100</td><td>11.27</td><td class="sig">&lt;.001</td><td>[$10.2k, $14.6k]</td><td>Holiday premium is large and reliable</td></tr>
+          <tr><td>Email campaign (1/0)</td><td class="ns">+$630</td><td>580</td><td>1.09</td><td class="ns">0.277</td><td>[−$508, $1,768]</td><td>Not significant — CI crosses zero</td></tr>
+        </tbody>
+      </table>
+
+      <div class="insight-box amber">
+        <div class="insight-title">⚠ Email campaign: not significant</div>
+        p = 0.277 means we cannot reject H₀: β<sub>email</sub> = 0. The 95% CI [−$508, +$1,768] crosses zero — the true effect could be negative, zero, or positive with this dataset. <strong>This is not proof that email does nothing</strong> — it means the data cannot distinguish the effect from zero at α = 0.05. Recommendation: run a controlled A/B test with randomized assignment before cutting or scaling email investment.
+      </div>
+    </div>
+
+    <div id="p2-assumptions" class="tab-panel">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">The LINE assumptions must be assessed before trusting coefficients, standard errors, or p-values. Violations change what the output means — they don't always invalidate the model, but they must be disclosed.</p>
+      <div class="assumption-grid">
+        <div class="assumption-card pass"><div class="a-title">✓ Linearity — met</div><div class="a-body">Residuals vs. fitted plot shows random scatter around zero. No systematic curvature. If violated: add polynomial terms (X²) or transform Y with log/sqrt.</div></div>
+        <div class="assumption-card pass"><div class="a-title">✓ Independence — met</div><div class="a-body">Durbin-Watson = 1.94 (range 0–4; near 2 = no autocorrelation). Satisfied here because observations are store-weeks drawn independently across 48 locations.</div></div>
+        <div class="assumption-card warn"><div class="a-title">⚠ Normality — mild concern</div><div class="a-body">Q-Q plot shows minor right-skew in extreme residual tails. With n = 4,992, CLT ensures inference is still valid. Flag in methods section; log-transform Y if RMSE does not improve.</div></div>
+        <div class="assumption-card fail"><div class="a-title">✗ Equal variance — violated</div><div class="a-body">Breusch-Pagan test: p = 0.003. Variance increases with fitted values (heteroskedasticity). <strong>Fix: use robust standard errors (HC3)</strong> — standard SEs and CIs are understated. Always report robust SEs when BP p &lt; 0.05.</div></div>
+      </div>
+      <div class="insight-box blue">
+        <div class="insight-title">VIF (Variance Inflation Factor) — multicollinearity check</div>
+        Ad spend VIF = 3.2; Foot traffic VIF = 2.9; all others &lt; 2.0. <strong>VIF &lt; 5 is generally acceptable.</strong> VIF &gt; 10 indicates severe multicollinearity — individual coefficients become unstable and uninterpretable even if R² remains high. Always check VIF before presenting partial coefficients to leadership.
+      </div>
+    </div>
+
+    <div id="p2-simulator" class="tab-panel">
+      <div class="interactive-zone">
+        <div class="iz-title">Revenue prediction simulator — Precision Retail Co.</div>
+        <div class="slider-row"><label>Ad spend ($)</label><input type="range" min="0" max="60000" step="500" value="22000" id="p2-ad" oninput="calcP2()"><span class="slider-val" id="p2-ad-o">$22,000</span></div>
+        <div class="slider-row"><label>Discount depth (%)</label><input type="range" min="0" max="30" step="1" value="12" id="p2-dd" oninput="calcP2()"><span class="slider-val" id="p2-dd-o">12%</span></div>
+        <div class="slider-row"><label>Foot traffic (visits)</label><input type="range" min="1000" max="80000" step="500" value="28000" id="p2-ft" oninput="calcP2()"><span class="slider-val" id="p2-ft-o">28,000</span></div>
+        <div class="slider-row"><label>Unemployment rate (%)</label><input type="range" min="2" max="12" step="0.1" value="4.5" id="p2-ur" oninput="calcP2()"><span class="slider-val" id="p2-ur-o">4.5%</span></div>
+        <div class="slider-row"><label>Holiday week</label><input type="range" min="0" max="1" step="1" value="0" id="p2-hw" oninput="calcP2()"><span class="slider-val" id="p2-hw-o">No</span></div>
+        <div class="result-display">
+          <div><div class="rd-label">Predicted weekly revenue</div><div class="rd-sub" id="p2-ci">95% CI: [$138.3k – $155.1k]</div></div>
+          <div class="rd-value" id="p2-res">$146,700</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:1rem">Driver contribution to prediction above intercept ($38,420):</p>
+      <div id="p2-bars"></div>
+    </div>
+
+    <div id="p2-insight" class="tab-panel">
+      <div class="insight-box green">
+        <div class="insight-title">Insight 1 — Ad spend ROI is measurable and compelling</div>
+        β<sub>ad</sub> = $4.10 with 95% CI [$3.36, $4.84]. <strong>Every dollar spent on advertising is associated with $4.10 in revenue at this store, holding all else equal.</strong> At $22,000/week ad spend across 48 stores, that's $4.3M in incremental attributed revenue weekly. The CI provides the board a defensible range rather than a false single-number precision.
+      </div>
+      <div class="insight-box amber">
+        <div class="insight-title">Insight 2 — Discounts boost gross revenue but erode margin</div>
+        β<sub>discount</sub> = +$1,580 per percentage point is statistically significant, but <strong>gross revenue is not net margin.</strong> A 5-point deeper discount costs margin on every unit sold. A complete recommendation to the CFO requires a companion margin model: if average margin is 32%, a 1pt discount sacrifices $320/unit while generating +$1,580 in volume. Positive net only if incremental volume exceeds ~0.20 units per $1 of margin sacrifice. Do not recommend discount increases based solely on this coefficient.
+      </div>
+      <div class="insight-box blue">
+        <div class="insight-title">Insight 3 — Macro risk is quantified</div>
+        β<sub>unemployment</sub> = −$820 per percentage point rise. When regional unemployment increases from 4.5% to 6.5% (a two-point rise), the model predicts −$1,640 in weekly revenue per store — or −$4.1M annually across the chain. This allows finance to model downside scenarios with quantified coefficients rather than gut-feel percentages.
+      </div>
+      <div class="insight-box gold">
+        <div class="insight-title">Caution — statistical significance ≠ causal proof</div>
+        These are observational associations from store-week data. A randomized field experiment (varying ad spend randomly across stores in a matched design) would be required to claim causation. The β coefficients are reliable for prediction and planning within the range of observed data. <strong>Extrapolating far beyond the training data range (e.g., tripling ad spend) introduces model uncertainty that the coefficient alone cannot quantify.</strong>
+      </div>
+
+      <div class="stat-grid" style="margin-top:1.5rem">
+        <div class="stat-card"><div class="stat-label">At 10K customers</div><div class="stat-value" style="font-size:16px">+$2.5M</div><div class="stat-sub">Digital vs. traditional CLV</div></div>
+        <div class="stat-card"><div class="stat-label">Holiday premium</div><div class="stat-value" style="font-size:16px">+$12,400</div><div class="stat-sub">Per store per holiday week</div></div>
+        <div class="stat-card"><div class="stat-label">Unemployment risk</div><div class="stat-value" style="font-size:16px">−$820</div><div class="stat-sub">Per 1pt unemployment rise</div></div>
+        <div class="stat-card"><div class="stat-label">Ad ROI range</div><div class="stat-value" style="font-size:16px">$3.36–$4.84</div><div class="stat-sub">95% CI per $1 spent</div></div>
+      </div>
+    </div>
+
+    <div id="p2-quiz" class="tab-panel">
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 1 of 2</span>A board member says: "Our ad spend coefficient is $4.10 — so if we triple our spend from $20k to $60k per week, revenue will increase by exactly $164,000." What is the correct analytical response?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p2q1')"><span class="opt-letter">A</span>Agree — the linear model predicts this precisely and it is reliable across all ranges</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p2q1')"><span class="opt-letter">B</span>The model supports that directional prediction within the observed data range, but extrapolating to $60k introduces substantial uncertainty — the linear relationship may not hold at that spend level, and diminishing returns are well-documented in advertising science</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p2q1')"><span class="opt-letter">C</span>The model is useless for budget decisions — only randomized experiments can guide ad spend</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p2q1')"><span class="opt-letter">D</span>The model already accounts for diminishing returns through its quadratic terms</div>
+        </div>
+        <div class="quiz-feedback" id="p2q1">✓ Correct. This is the extrapolation trap. The β coefficient is a locally valid estimate within the range of observed training data. If stores historically spent between $5k–$35k/week, the linear assumption at $60k is an out-of-sample projection, not an interpolation. Advertising has well-documented diminishing returns at high spend levels. The board member is making a reasonable planning estimate directionally, but the analyst's job is to communicate the widening uncertainty band and recommend a controlled spend experiment at higher budget levels before committing. The CI of [$3.36, $4.84] already acknowledges parameter uncertainty — it does not capture structural model uncertainty from extrapolation.</div>
+      </div>
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 2 of 2</span>The model's adjusted R² is 0.849. A colleague proposes adding 8 more demographic variables to push R² above 0.90. What is the statistically correct response?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p2q2')"><span class="opt-letter">A</span>Add all 8 — higher R² always means a better model</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p2q2')"><span class="opt-letter">B</span>Evaluate each variable on theoretical justification and check whether it improves adjusted R² and holdout performance — adding noise variables inflates R² while degrading generalization</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p2q2')"><span class="opt-letter">C</span>An adjusted R² of 0.849 is unacceptable — all business models should exceed 0.95</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p2q2')"><span class="opt-letter">D</span>Use stepwise regression to automatically select all variables that improve R²</div>
+        </div>
+        <div class="quiz-feedback" id="p2q2">✓ Correct. R² never decreases when you add variables — even random noise will marginally increase it. Adjusted R² penalizes for predictor count and will fall if a new variable contributes less explanatory power than it costs in degrees of freedom. The correct test for adding a variable: (1) Is there a theoretical reason it should predict revenue? (2) Does it improve adjusted R² and cross-validated test performance? (3) Does it change existing coefficients in ways that suggest multicollinearity? Stepwise regression, while computationally convenient, produces models optimized for one training dataset that generalize poorly. Modern best practice is theory-guided variable selection with holdout validation.</div>
+      </div>
+    </div>
+
+    <div class="part-nav">
+      <button class="nav-btn" onclick="showPart('part1')">← Previous</button>
+      <button class="nav-btn primary" onclick="showPart('part3')">Next: Logistic Regression →</button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!--  PART 3 — Logistic Regression                                -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section id="part3" class="part-section">
+    <div class="part-header">
+      <div>
+        <div class="part-eyebrow">Part 3 · Section 6 · 20 Points</div>
+        <div class="part-title">Logistic Regression Analysis</div>
+        <div class="part-desc">Predicting binary outcomes and optimizing classification thresholds for real cost structures.</div>
+      </div>
+      <div class="part-points">20 pts</div>
+    </div>
+
+    <div class="scenario-box">
+      <strong>Business scenario:</strong> You are Chief Customer Officer at <em>CloudPeak SaaS</em> (140,000 B2B subscribers; $89/mo Basic, $220/mo Pro). Monthly churn averages 3.8%. Your retention team can proactively contact 500 customers/month. A false negative (missed churner) costs ~$1,200 in LTV. A false positive (contacting a loyal customer) costs $30. Your logistic regression model was trained on <em>n = 28,400</em> customer-months.
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showTab('p3','concept')">Concept</button>
+      <button class="tab-btn" onclick="showTab('p3','output')">Model Output</button>
+      <button class="tab-btn" onclick="showTab('p3','calculator')">Churn Calculator</button>
+      <button class="tab-btn" onclick="showTab('p3','threshold')">Threshold Analysis</button>
+      <button class="tab-btn" onclick="showTab('p3','quiz')">Knowledge Check</button>
+    </div>
+
+    <div id="p3-concept" class="tab-panel active">
+      <p style="font-size:14px;margin-bottom:1rem;color:var(--muted)">Logistic regression maps predictors to a probability in (0, 1) via the logistic (sigmoid) function. Unlike linear regression applied to a 0/1 outcome, predictions can never exceed 1.0 or fall below 0 — critical when outputs are used as probabilities for business decisions.</p>
+      <div class="hyp-block">
+<span class="comment"># The logistic model — log-odds form</span>
+<span class="h0">log(p / 1−p) = β₀ + β₁X₁ + β₂X₂ + ... + βₖXₖ</span>
+
+<span class="comment"># Converting log-odds to probability</span>
+<span class="ha">p = 1 / (1 + e⁻ᶻ)    where z = β₀ + ΣβᵢXᵢ</span>
+
+<span class="comment"># Odds ratio for variable Xᵢ</span>
+<span class="c-highlight">OR = e^βᵢ</span>
+<span class="comment"># OR > 1: each unit increase in Xᵢ multiplies churn odds by OR</span>
+<span class="comment"># OR < 1: each unit increase in Xᵢ reduces churn odds by (1−OR)×100%</span>
+
+<span class="comment">
+from sklearn.linear_model import LogisticRegression
+model.fit(X_train, y_train)
+probs = model.predict_proba(X_test)[:, 1]   # churn probabilities
+preds = (probs >= threshold).astype(int)    # classify at chosen threshold</span>
+      </div>
+      <div class="insight-box amber">
+        <div class="insight-title">⚠ Why not use linear regression for binary outcomes?</div>
+        OLS applied to a 0/1 outcome (linear probability model) produces predictions that can exceed 1.0 or fall below 0.0 — mathematically nonsensical for probabilities. Logistic regression's sigmoid transformation ensures all outputs stay in (0, 1). Additionally, the residuals of an LPM are heteroskedastic by construction, inflating standard errors and undermining inference.
+      </div>
+    </div>
+
+    <div id="p3-output" class="tab-panel">
+      <div class="stat-grid">
+        <div class="stat-card highlight"><div class="stat-label">McFadden R²</div><div class="stat-value">0.241</div><div class="stat-sub">Pseudo R² (0.2–0.4 = good)</div></div>
+        <div class="stat-card highlight"><div class="stat-label">AUC-ROC</div><div class="stat-value">0.847</div><div class="stat-sub">Discriminatory power</div></div>
+        <div class="stat-card highlight"><div class="stat-label">HL test p</div><div class="stat-value">0.38</div><div class="stat-sub">Good calibration (p&gt;0.05)</div></div>
+        <div class="stat-card highlight"><div class="stat-label">n</div><div class="stat-value">28,400</div><div class="stat-sub">Customer-months</div></div>
+      </div>
+      <table class="result-table">
+        <thead><tr><th>Variable</th><th>β</th><th>SE</th><th>p-value</th><th>Odds ratio (eᵝ)</th><th>Business interpretation</th></tr></thead>
+        <tbody>
+          <tr><td>Tenure (months)</td><td class="sig">−0.048</td><td>0.007</td><td class="sig">&lt;.001</td><td class="sig">0.953</td><td>Each month reduces churn odds by 4.7%</td></tr>
+          <tr><td>Support tickets (30d)</td><td class="sig">+0.214</td><td>0.029</td><td class="sig">&lt;.001</td><td class="sig">1.239</td><td>Each ticket increases churn odds 24%</td></tr>
+          <tr><td>Days since login</td><td class="sig">+0.038</td><td>0.005</td><td class="sig">&lt;.001</td><td class="sig">1.039</td><td>Each inactive day = 3.9% higher churn odds</td></tr>
+          <tr><td>Pro plan (vs Basic)</td><td class="sig">−0.712</td><td>0.095</td><td class="sig">&lt;.001</td><td class="sig">0.491</td><td>Pro users have 51% lower churn odds</td></tr>
+          <tr><td>Team seats</td><td class="sig">−0.031</td><td>0.009</td><td class="sig">&lt;.001</td><td class="sig">0.969</td><td>More seats = more embedded = lower churn</td></tr>
+          <tr><td>Payment failed (30d)</td><td class="sig">+1.143</td><td>0.148</td><td class="sig">&lt;.001</td><td class="sig">3.136</td><td>Failed payment triples churn odds</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="p3-calculator" class="tab-panel">
+      <div class="interactive-zone">
+        <div class="iz-title">Individual customer churn probability calculator</div>
+        <div class="slider-row"><label>Tenure (months)</label><input type="range" min="1" max="60" step="1" value="6" id="p3-ten" oninput="calcP3()"><span class="slider-val" id="p3-ten-o">6 mo</span></div>
+        <div class="slider-row"><label>Support tickets (30d)</label><input type="range" min="0" max="15" step="1" value="5" id="p3-tkt" oninput="calcP3()"><span class="slider-val" id="p3-tkt-o">5</span></div>
+        <div class="slider-row"><label>Days since last login</label><input type="range" min="0" max="60" step="1" value="18" id="p3-dsl" oninput="calcP3()"><span class="slider-val" id="p3-dsl-o">18d</span></div>
+        <div class="slider-row"><label>Plan tier</label><input type="range" min="0" max="1" step="1" value="0" id="p3-plt" oninput="calcP3()"><span class="slider-val" id="p3-plt-o">Basic</span></div>
+        <div class="slider-row"><label>Team seats</label><input type="range" min="1" max="50" step="1" value="3" id="p3-sts" oninput="calcP3()"><span class="slider-val" id="p3-sts-o">3</span></div>
+        <div class="slider-row"><label>Payment failed?</label><input type="range" min="0" max="1" step="1" value="0" id="p3-pf" oninput="calcP3()"><span class="slider-val" id="p3-pf-o">No</span></div>
+        <div class="result-display">
+          <div><div class="rd-label">Churn probability</div><div class="rd-sub" id="p3-risk-txt">High risk — recommend intervention</div></div>
+          <div class="rd-value" id="p3-res">72%</div>
+        </div>
+      </div>
+      <div class="prob-bar-wrap">
+        <div class="prob-bar-outer"><div class="prob-bar-inner" id="p3-bar" style="width:72%;background:#8b0000"></div></div>
+        <div class="prob-bar-labels"><span>0% — Low risk</span><span>30% threshold</span><span>50% threshold</span><span>100% — Certain churn</span></div>
+      </div>
+    </div>
+
+    <div id="p3-threshold" class="tab-panel">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">The 50% threshold is an arbitrary default appropriate only when FP and FN costs are equal and base rates are near 50%. Neither applies here. The optimal threshold minimizes total expected cost given your actual error costs.</p>
+
+      <div class="interactive-zone">
+        <div class="iz-title">Classification threshold cost optimizer</div>
+        <div class="slider-row"><label>Classification threshold (%)</label><input type="range" min="10" max="80" step="5" value="50" id="p3-thr" oninput="calcThr3()"><span class="slider-val" id="p3-thr-o">50%</span></div>
+        <div class="stat-grid" style="margin-top:.75rem">
+          <div class="stat-card"><div class="stat-label">True positives</div><div class="stat-value" id="p3-tp">156</div><div class="stat-sub">Churners caught</div></div>
+          <div class="stat-card"><div class="stat-label">False negatives</div><div class="stat-value" id="p3-fn" style="color:var(--red)">24</div><div class="stat-sub">Missed churners</div></div>
+          <div class="stat-card"><div class="stat-label">False positives</div><div class="stat-value" id="p3-fp" style="color:var(--amber)">44</div><div class="stat-sub">Wasted outreach</div></div>
+          <div class="stat-card"><div class="stat-label">Total expected cost</div><div class="stat-value" id="p3-cost" style="color:var(--blue)">$30,120</div><div class="stat-sub">FN×$1,200 + FP×$30</div></div>
+        </div>
+        <div class="result-display">
+          <div><div class="rd-label">Monthly cost at this threshold</div><div class="rd-sub" id="p3-thr-msg">Lower threshold reduces FN cost significantly</div></div>
+          <div class="rd-value" id="p3-thr-cost">$30,120</div>
+        </div>
+      </div>
+
+      <div class="insight-box green">
+        <div class="insight-title">Expected value reasoning: why 30% beats 50%</div>
+        At 50% threshold: ~156 TP, 24 FN, 44 FP → Cost = 24×$1,200 + 44×$30 = <strong>$30,120/month</strong><br>
+        At 30% threshold: ~172 TP, 8 FN, 168 FP → Cost = 8×$1,200 + 168×$30 = <strong>$14,640/month</strong><br><br>
+        The 40:1 cost asymmetry (FN costs 40× more than FP) dominates. <strong>The threshold is a business decision, not a statistical default.</strong> The analyst who defaults to 50% and never raises this conversation is leaving $15,000+/month in preventable costs on the table.
+      </div>
+
+      <div class="conf-matrix" style="margin-top:1rem">
+        <div class="cm-cell cm-tp"><div class="cm-label">True Positives</div><div class="cm-value">172</div><div class="cm-note">Churners correctly flagged</div></div>
+        <div class="cm-cell cm-fp"><div class="cm-label">False Positives</div><div class="cm-value">168</div><div class="cm-note">Loyal customers contacted</div></div>
+        <div class="cm-cell cm-fn"><div class="cm-label">False Negatives</div><div class="cm-value">8</div><div class="cm-note">Missed churners — LTV lost</div></div>
+        <div class="cm-cell cm-tn"><div class="cm-label">True Negatives</div><div class="cm-value">652</div><div class="cm-note">Correctly left alone</div></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted)">At 30% threshold on 1,000-customer test set. Precision = 50.6% · Recall = 95.6% · Accuracy = 82.4%</p>
+    </div>
+
+    <div id="p3-quiz" class="tab-panel">
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 1 of 2</span>Your logistic model has AUC-ROC = 0.847. A junior analyst tells the executive team "our model is 84.7% accurate." What is the most precise correction?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p3q1')"><span class="opt-letter">A</span>Agree — AUC-ROC directly measures classification accuracy</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p3q1')"><span class="opt-letter">B</span>AUC-ROC measures rank-ordering ability across all thresholds — it is the probability that the model ranks a random churner above a random non-churner. Accuracy depends on the specific threshold chosen and should be reported from the confusion matrix.</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p3q1')"><span class="opt-letter">C</span>The model needs AUC ≥ 0.90 before it can be presented to leadership</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p3q1')"><span class="opt-letter">D</span>AUC-ROC is irrelevant — only the confusion matrix matters for business decisions</div>
+        </div>
+        <div class="quiz-feedback" id="p3q1">✓ Correct. AUC-ROC (Area Under the Receiver Operating Characteristic Curve) is a threshold-independent metric. It measures discriminatory power: if you randomly draw one churner and one non-churner from the test set, an AUC of 0.847 means the model assigns the churner a higher probability 84.7% of the time. It is not an accuracy percentage. Accuracy at a given threshold is computed from the confusion matrix and will be different from the AUC. For the executive briefing: translate AUC as "the model correctly ranks churners above non-churners 85% of the time when comparing pairs" — that's the intuitive, decision-relevant framing.</div>
+      </div>
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 2 of 2</span>A customer has an OR of 3.136 for "payment failed." The CMO interprets this as "customers with payment failures are 213.6% more likely to churn." Is this correct?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p3q2')"><span class="opt-letter">A</span>Yes — OR = 3.136 means 213.6% higher relative likelihood of churning</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p3q2')"><span class="opt-letter">B</span>No — the OR of 3.136 means customers are 3.136 percentage points more likely to churn</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p3q2')"><span class="opt-letter">C</span>Partially. OR = 3.136 means the <em>odds</em> of churning are 3.136× higher (213.6% higher odds), not 213.6% higher probability. For rare outcomes like churn, OR approximates relative risk — but the distinction matters for accurate executive communication.</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p3q2')"><span class="opt-letter">D</span>No — odds ratios cannot be interpreted as relative probabilities under any circumstances</div>
+        </div>
+        <div class="quiz-feedback" id="p3q2">✓ Correct. Odds ratios and relative risk are distinct. OR = 3.136 means the odds of churning (p/1-p) are 3.136× higher for payment-failure customers. For rare outcomes (base rate ~3.8%), the OR approximates relative risk closely — so "roughly 3× more likely to churn" is a defensible simplification for the CMO. However, saying "213.6% more likely" conflates odds with probability. The technically precise statement: "Customers with a payment failure have 3.1× higher odds of churning in the following month, holding all other factors constant." For non-technical audiences, a simpler framing works: "A payment failure is the single strongest predictor of imminent churn — these customers should be the first contact priority regardless of threshold."</div>
+      </div>
+    </div>
+
+    <div class="part-nav">
+      <button class="nav-btn" onclick="showPart('part2')">← Previous</button>
+      <button class="nav-btn primary" onclick="showPart('part4')">Next: Time-Series →</button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!--  PART 4 — Time-Series                                        -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section id="part4" class="part-section">
+    <div class="part-header">
+      <div>
+        <div class="part-eyebrow">Part 4 · Section 6 · 20 Points</div>
+        <div class="part-title">Time-Series Analysis &amp; Forecasting: Introduction</div>
+        <div class="part-desc">Modeling sequential data, testing stationarity, and producing actionable demand forecasts.</div>
+      </div>
+      <div class="part-points">20 pts</div>
+    </div>
+
+    <div class="scenario-box">
+      <strong>Business scenario:</strong> You lead supply chain analytics at <em>Harvest Foods Co.</em>, a national grocery distributor. You have 4 years (48 months) of historical produce demand data showing a consistent upward trend (+2.4%/quarter) and strong Q4 seasonality (±21%). You must forecast the next 6 months to drive procurement contracts and prevent both overstock waste and stockout lost sales.
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showTab('p4','concept')">Concept</button>
+      <button class="tab-btn" onclick="showTab('p4','decomp')">Decomposition</button>
+      <button class="tab-btn" onclick="showTab('p4','stationarity')">Stationarity</button>
+      <button class="tab-btn" onclick="showTab('p4','forecast')">Forecast Chart</button>
+      <button class="tab-btn" onclick="showTab('p4','models')">Model Comparison</button>
+      <button class="tab-btn" onclick="showTab('p4','quiz')">Knowledge Check</button>
+    </div>
+
+    <div id="p4-concept" class="tab-panel active">
+      <p style="font-size:14px;margin-bottom:1rem;color:var(--muted)">Standard regression assumes observations are independent. In time-series data, today's value is correlated with yesterday's — violating independence. ARIMA models this autocorrelation structure explicitly, treating past values of Y as predictors of future Y.</p>
+      <div class="hyp-block">
+<span class="comment"># ARIMA(p, d, q) model specification</span>
+<span class="h0">Yₜ = c + φ₁Yₜ₋₁ + ... + φₚYₜ₋ₚ + εₜ − θ₁εₜ₋₁ − ... − θqεₜ₋q</span>
+
+<span class="comment">p = autoregressive order (# lagged Y values included)</span>
+<span class="comment">d = differencing order (# times series was differenced)</span>
+<span class="comment">q = moving average order (# lagged error terms included)</span>
+
+<span class="comment"># For seasonal data: SARIMA(p,d,q)(P,D,Q)₁₂</span>
+<span class="ha">H₀: unit root present → series is non-stationary (ADF test)</span>
+<span class="ha">Hₐ: no unit root → series is stationary</span>
+<span class="comment">
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tsa.stattools import adfuller
+adf_result = adfuller(demand_series)  # p > 0.05 → difference needed</span>
+      </div>
+      <div class="insight-box red">
+        <div class="insight-title">The spurious regression trap</div>
+        If you regress two non-stationary (trending) time series against each other with OLS, you will almost always find high R² and significant p-values — even when the variables are completely unrelated. This is spurious regression. A well-documented example: US cheese consumption and deaths by bedsheet tangling correlate at R² = 0.95 over 10 years. Stationarity testing prevents this fundamental error.
+      </div>
+    </div>
+
+    <div id="p4-decomp" class="tab-panel">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">Before fitting a model, decompose the series into its structural components. This builds intuition about what the model must capture and reveals whether trend and seasonality are stable enough to extrapolate.</p>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Trend component</div><div class="stat-value" style="font-size:18px">+2.4%/qtr</div><div class="stat-sub">Consistent upward drift — population growth + store expansion</div></div>
+        <div class="stat-card"><div class="stat-label">Seasonal amplitude</div><div class="stat-value" style="font-size:18px">±21%</div><div class="stat-sub">Q4 peak (holidays), Q1 trough; stable year-over-year</div></div>
+        <div class="stat-card"><div class="stat-label">Cyclical component</div><div class="stat-value" style="font-size:18px">±5%</div><div class="stat-sub">Tied to economic cycles; harder to forecast reliably</div></div>
+        <div class="stat-card"><div class="stat-label">Residual noise</div><div class="stat-value" style="font-size:18px">±3.2%</div><div class="stat-sub">Random variation; irreducible with this model family</div></div>
+      </div>
+
+      <div class="assumption-grid" style="margin-top:.5rem">
+        <div class="assumption-card pass"><div class="a-title">ACF — significant at lags 1, 2, 12</div><div class="a-body">Lag-12 significance confirms annual seasonality (monthly data). Signals SARIMA needed: SARIMA(p,d,q)(P,D,Q)₁₂. The seasonal component is the largest source of forecast uncertainty.</div></div>
+        <div class="assumption-card pass"><div class="a-title">PACF — significant at lags 1–2 only</div><div class="a-body">Suggests AR(2) — the series is best predicted by its two most recent prior values. After accounting for those, additional past values add no predictive power.</div></div>
+        <div class="assumption-card warn"><div class="a-title">ADF test — p = 0.31 (non-stationary)</div><div class="a-body">Fail to reject H₀. Series has unit root — non-stationary. First differencing required. d = 1. Re-run ADF on differenced series → p = 0.003 ✓</div></div>
+        <div class="assumption-card pass"><div class="a-title">Ljung-Box on residuals — p = 0.42</div><div class="a-body">No significant autocorrelation remaining in residuals. Model has captured the temporal structure. Residuals approximate white noise — model specification is complete.</div></div>
+      </div>
+    </div>
+
+    <div id="p4-stationarity" class="tab-panel">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">Stationarity means the series has a constant mean, constant variance, and no systematic trend over time. ARIMA requires stationarity — or differenced-to-stationarity data.</p>
+
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span class="step-text"><strong>Run the Augmented Dickey-Fuller (ADF) test</strong><br>H₀ = unit root present (non-stationary). If p ≥ 0.05, fail to reject — the series is non-stationary. Do not proceed to ARIMA without differencing.</span></li>
+        <li><span class="step-num">2</span><span class="step-text"><strong>Apply first differencing if needed</strong><br>Compute Δyₜ = yₜ − yₜ₋₁. This removes a linear trend. The d parameter in ARIMA(p,d,q) records how many times you differenced. d = 1 handles most business series.</span></li>
+        <li><span class="step-num">3</span><span class="step-text"><strong>Re-run ADF on the differenced series</strong><br>If p &lt; 0.05 after first differencing: stationarity achieved. Set d = 1 and proceed. If still non-stationary, difference again (d = 2) — rare for standard business data.</span></li>
+        <li><span class="step-num">4</span><span class="step-text"><strong>Check for seasonal differencing</strong><br>If seasonal pattern persists after regular differencing, apply seasonal differencing: Δ₁₂yₜ = yₜ − yₜ₋₁₂ (for monthly data with annual seasonality). The D parameter in SARIMA records this.</span></li>
+      </ul>
+
+      <div class="insight-box gold">
+        <div class="insight-title">Harvest Foods ADF results summary</div>
+        Original series: ADF p = 0.31 → non-stationary → apply first differencing<br>
+        After differencing (d=1): ADF p = 0.003 → stationary ✓<br>
+        After seasonal differencing (D=1): seasonal stationarity confirmed ✓<br>
+        Final specification: <strong>SARIMA(2, 1, 1)(1, 1, 1)₁₂</strong>
+      </div>
+    </div>
+
+    <div id="p4-forecast" class="tab-panel">
+      <div class="interactive-zone">
+        <div class="iz-title">SARIMA forecast explorer — Harvest Foods demand</div>
+        <div class="slider-row"><label>Trend (% per quarter)</label><input type="range" min="-3" max="8" step="0.5" value="2.5" id="p4-trnd" oninput="drawP4()"><span class="slider-val" id="p4-trnd-o">2.5%</span></div>
+        <div class="slider-row"><label>Seasonal amplitude (%)</label><input type="range" min="0" max="40" step="1" value="21" id="p4-samp" oninput="drawP4()"><span class="slider-val" id="p4-samp-o">21%</span></div>
+        <div class="slider-row"><label>Forecast horizon (months)</label><input type="range" min="2" max="12" step="1" value="6" id="p4-fhor" oninput="drawP4()"><span class="slider-val" id="p4-fhor-o">6 mo</span></div>
+      </div>
+      <div class="chart-wrap" style="height:240px;">
+        <canvas id="p4Canvas" role="img" aria-label="Time series forecast showing historical monthly demand and projected future months with 80% confidence intervals"></canvas>
+      </div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:#570C0F"></span>Historical (actual)</span>
+        <span><span class="legend-dot" style="background:#C8A84B;border:1px dashed #C8A84B"></span>SARIMA forecast</span>
+        <span><span class="legend-dot" style="background:rgba(200,168,75,0.25);border:1px solid rgba(200,168,75,.5)"></span>80% confidence interval</span>
+      </div>
+
+      <div class="insight-box blue">
+        <div class="insight-title">Reading forecasts for procurement decisions</div>
+        Use the <strong>upper bound</strong> of the CI for inventory procurement, not the point estimate. Stockout costs (lost sales + customer attrition + contract penalties) typically exceed overstock costs (storage + markdown) in grocery supply chains. The CI widens as the horizon extends — a 2-month forecast may have ±6% uncertainty while a 9-month forecast has ±18%. <strong>Communicate the CI range to the COO alongside the point estimate; leaders who see only one number assume more certainty than exists.</strong>
+      </div>
+    </div>
+
+    <div id="p4-models" class="tab-panel">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">Five forecasting approaches are commonly used in business contexts. Choosing the right one depends on series structure, available covariates, and interpretability requirements.</p>
+      <table class="compare-table">
+        <thead><tr><th style="width:18%">Method</th><th style="width:20%">Best for</th><th style="width:22%">Key strengths</th><th style="width:20%">Limitations</th><th style="width:20%">Business use case</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Simple exponential smoothing</strong></td><td>Short series, no trend or seasonality</td><td>Fast; transparent α parameter; requires minimal history</td><td>No structural components</td><td>Weekly cash flow, short-horizon KPIs</td></tr>
+          <tr><td><strong>Holt-Winters (ETS)</strong></td><td>Trend + seasonal series</td><td>Handles both; interpretable α/β/γ; additive or multiplicative</td><td>Assumes fixed structure; no external regressors</td><td>Retail sales with clear seasonality</td></tr>
+          <tr><td><strong>ARIMA(p,d,q)</strong></td><td>Stationary or differenced series</td><td>Rigorous statistical framework; produces CIs; well-studied</td><td>Requires diagnostic expertise; no covariates without extension</td><td>Demand forecasting, economic series</td></tr>
+          <tr><td><strong>Prophet (Meta)</strong></td><td>Business series with irregular events</td><td>Handles holidays, changepoints, missing data automatically</td><td>Less interpretable; fewer diagnostic tools</td><td>Product launches, web traffic, social metrics</td></tr>
+          <tr><td><strong>ARIMAX / SARIMAX</strong></td><td>Series with known external drivers</td><td>Combines temporal structure with regression on covariates (price, promotions, weather)</td><td>Most complex; requires both time-series and regression expertise</td><td>Any forecast where you control a causal lever</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="p4-quiz" class="tab-panel">
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 1 of 2</span>ADF test on monthly revenue returns p = 0.38. You difference the series once. The new ADF returns p = 0.004. What does this mean and how should you proceed?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p4q1')"><span class="opt-letter">A</span>Both p-values confirm stationarity — proceed with the original series</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p4q1')"><span class="opt-letter">B</span>Original series had a unit root (non-stationary); one round of differencing achieved stationarity; set d = 1 and proceed with ARIMA(p,1,q)</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p4q1')"><span class="opt-letter">C</span>The series is still non-stationary — apply a log transformation and re-test</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p4q1')"><span class="opt-letter">D</span>Use the undifferenced series but apply first-order smoothing as compensation</div>
+        </div>
+        <div class="quiz-feedback" id="p4q1">✓ Correct. ADF H₀ = unit root present (non-stationary). p = 0.38 → fail to reject H₀ → non-stationary. After first differencing, p = 0.004 → reject H₀ → differenced series is stationary. This tells you d = 1 in ARIMA(p,1,q). In practical terms, your revenue series has a stochastic trend — a random walk component that differencing removes. This is the standard finding for most business revenue and demand series. Use ACF/PACF on the differenced series to determine p and q. Had the series remained non-stationary after d=1, a second difference (d=2) would be applied — but this is uncommon in practice and often signals a measurement or structural issue in the data.</div>
+      </div>
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 2 of 2</span>Your Q2 demand forecast is 4,200 units with an 80% CI of [3,700, 4,900]. Your COO asks whether to commit to a $4.5M procurement contract (requiring ~4,500 units). How do you advise?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p4q2')"><span class="opt-letter">A</span>Commit — 4,500 is within the 80% CI so it's a safe procurement level</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p4q2')"><span class="opt-letter">B</span>Present the full CI and frame the decision around stockout cost vs. overstock cost at 4,500 units — the CI alone cannot determine the right procurement level without a cost model</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p4q2')"><span class="opt-letter">C</span>Do not commit — the point estimate is 4,200 and procurement above that level is statistically unjustified</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p4q2')"><span class="opt-letter">D</span>Use the lower bound (3,700) — conservative planning minimizes all risk</div>
+        </div>
+        <div class="quiz-feedback" id="p4q2">✓ Correct. A forecast without a cost structure is an incomplete recommendation. The right framing: "If we commit to 4,500 units and demand comes in at 3,700 (lower bound), we carry 800 units in overstock — what does that cost in storage and markdown? If we commit to 4,200 and demand hits 4,900, we're 700 units short — what does that cost in lost sales and customer attrition?" The CI tells you the range your procurement decision must survive. Cost asymmetry — not the CI alone — drives the optimal procurement level. In most grocery supply chains, stockout costs exceed overstock costs, so skewing toward the upper CI bound is rational. Always pair the forecast output with explicit cost modeling before presenting a procurement recommendation.</div>
+      </div>
+    </div>
+
+    <div class="part-nav">
+      <button class="nav-btn" onclick="showPart('part3')">← Previous</button>
+      <button class="nav-btn primary" onclick="showPart('part5')">Next: Validating Models →</button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!--  PART 5 — Model Validation                                   -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section id="part5" class="part-section">
+    <div class="part-header">
+      <div>
+        <div class="part-eyebrow">Part 5 · Section 6 · 15 Points</div>
+        <div class="part-title">Validating Prediction Models</div>
+        <div class="part-desc">Ensuring your model generalizes to new data before committing organizational resources to its recommendations.</div>
+      </div>
+      <div class="part-points">15 pts</div>
+    </div>
+
+    <div class="scenario-box">
+      <strong>Business scenario:</strong> You are VP of Analytics at <em>Summit Regional Health</em>, a health insurer. Your team built a regression model predicting annual patient cost ($) using age, BMI, smoking status, diagnosis category, and plan type. Before pricing 200,000 policies with this model, you must validate it will not systematically misprice due to overfitting.
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showTab('p5','concept')">Why Validation Matters</button>
+      <button class="tab-btn" onclick="showTab('p5','framework')">Validation Framework</button>
+      <button class="tab-btn" onclick="showTab('p5','simulator')">Overfit Detector</button>
+      <button class="tab-btn" onclick="showTab('p5','metrics')">Metrics by Model Type</button>
+      <button class="tab-btn" onclick="showTab('p5','quiz')">Knowledge Check</button>
+    </div>
+
+    <div id="p5-concept" class="tab-panel active">
+      <p style="font-size:14px;margin-bottom:1rem;color:var(--muted)">A model that performs well on training data may perform far worse on new data. This gap — between training performance and real-world performance — is the central risk in any analytical deployment. As a manager, closing this gap before committing resources is your responsibility.</p>
+
+      <div class="insight-box red">
+        <div class="insight-title">Data leakage — the #1 cause of models that appear to work until deployed</div>
+        Data leakage occurs when information from the future or from the test set bleeds into model training. Example: a churn model trained on data that includes whether the customer had already filed a cancellation request (a future-derived feature). It will achieve near-perfect training accuracy and collapse in production. <strong>Leakage produces models that look spectacular on paper and fail catastrophically in practice.</strong> Check every feature for temporal precedence: can this feature be known at prediction time?
+      </div>
+
+      <ul class="steps-list">
+        <li><span class="step-num">1</span><span class="step-text"><strong>Split data before any preprocessing</strong><br>The train/test split must happen before imputation, scaling, or feature engineering. Fitting a scaler on combined train+test data leaks test statistics into training — a subtle but common error.</span></li>
+        <li><span class="step-num">2</span><span class="step-text"><strong>Never look at test data until final evaluation</strong><br>Iterating model design based on test performance converts your holdout into another training signal. Use a validation set for tuning; reserve the test set for a single final evaluation that represents real-world performance.</span></li>
+        <li><span class="step-num">3</span><span class="step-text"><strong>Report test performance, not training performance</strong><br>Any model report presented to executive leadership must prominently feature holdout or cross-validated performance. Training R² alone is a misleading, incomplete metric. If someone shows you only training performance, ask for holdout immediately.</span></li>
+      </ul>
+    </div>
+
+    <div id="p5-framework" class="tab-panel">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">Match validation rigor to the stakes of the decision. A dashboard metric for internal use has different requirements than a pricing model applied to 200,000 policies.</p>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Level 1</div><div class="stat-value" style="font-size:15px">Train/test split</div><div class="stat-sub">80/20 holdout. Fast, minimum viable. Use for low-stakes internal tools.</div></div>
+        <div class="stat-card"><div class="stat-label">Level 2</div><div class="stat-value" style="font-size:15px">K-fold CV</div><div class="stat-sub">5 or 10 folds. Better variance estimate. Standard for most production models.</div></div>
+        <div class="stat-card"><div class="stat-label">Level 3</div><div class="stat-value" style="font-size:15px">Nested CV</div><div class="stat-sub">CV within CV. Unbiased when tuning hyperparameters simultaneously with evaluation.</div></div>
+        <div class="stat-card"><div class="stat-label">Level 4</div><div class="stat-value" style="font-size:15px">Temporal holdout</div><div class="stat-sub">For time-series: always train on past, test on future. Never shuffle time-series data randomly.</div></div>
+      </div>
+
+      <div class="insight-box amber">
+        <div class="insight-title">⚠ Class imbalance trap — the accuracy illusion</div>
+        A churn model on a dataset with 3.8% churn rate can achieve <strong>96.2% accuracy by predicting "no churn" for every single customer</strong> — a completely useless model. Always report precision, recall, and F1 on the minority class for imbalanced datasets. Overall accuracy is meaningless when class proportions are unequal. This mistake is made regularly by analysts presenting results to non-technical leadership.
+      </div>
+    </div>
+
+    <div id="p5-simulator" class="tab-panel">
+      <div class="interactive-zone">
+        <div class="iz-title">Overfit detector — train vs. test gap simulator</div>
+        <div class="slider-row"><label>Model complexity (features)</label><input type="range" min="2" max="25" step="1" value="6" id="p5-comp" oninput="calcP5()"><span class="slider-val" id="p5-comp-o">6</span></div>
+        <div class="slider-row"><label>Training set size (n)</label><input type="range" min="100" max="5000" step="100" value="1200" id="p5-sz" oninput="calcP5()"><span class="slider-val" id="p5-sz-o">1,200</span></div>
+        <div class="stat-grid" style="margin-top:.75rem">
+          <div class="stat-card"><div class="stat-label">Train R²</div><div class="stat-value" id="p5-tr">0.874</div><div class="stat-sub">In-sample fit</div></div>
+          <div class="stat-card"><div class="stat-label">Test R²</div><div class="stat-value" id="p5-te">0.841</div><div class="stat-sub">Out-of-sample fit</div></div>
+          <div class="stat-card"><div class="stat-label">Train RMSE</div><div class="stat-value" id="p5-rmse">$3,820</div><div class="stat-sub">Training error</div></div>
+          <div class="stat-card"><div class="stat-label">Overfit gap</div><div class="stat-value" id="p5-gap" style="color:var(--blue)">0.033</div><div class="stat-sub" id="p5-gap-n">Acceptable</div></div>
+        </div>
+        <div class="result-display">
+          <div><div class="rd-label">Model deployment status</div><div class="rd-sub" id="p5-msg">Increase features or reduce n to observe overfitting</div></div>
+          <div class="rd-value" id="p5-verdict" style="font-size:15px">Ready to deploy</div>
+        </div>
+      </div>
+
+      <div class="insight-box blue">
+        <div class="insight-title">Rule of thumb: observations per predictor</div>
+        For stable OLS coefficient estimates, the conventional minimum is <strong>10–15 observations per predictor variable</strong>. With 1,200 observations and 6 predictors (200:1 ratio), the model is well-estimated. Push to 20+ features and the ratio drops below 60:1 — coefficients become unstable and the train-test gap widens. This is why adding demographic variables "to improve R²" often backfires: it degrades generalization even as training performance rises.
+      </div>
+    </div>
+
+    <div id="p5-metrics" class="tab-panel">
+      <table class="compare-table">
+        <thead><tr><th>Model type</th><th>Primary validation metric</th><th>What it tells the manager</th><th>Common mistake</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Linear regression</strong></td><td>Holdout RMSE, MAE, R²</td><td>RMSE/MAE = average prediction error in original units. R² = % variance explained on new data.</td><td>Reporting only training R². Always show holdout R².</td></tr>
+          <tr><td><strong>Logistic regression</strong></td><td>AUC-ROC, precision, recall, F1</td><td>AUC = rank-ordering quality. Precision/recall depend on chosen threshold.</td><td>Reporting overall accuracy on imbalanced datasets.</td></tr>
+          <tr><td><strong>Time-series (ARIMA)</strong></td><td>Holdout MAPE, RMSE on future periods</td><td>MAPE = mean absolute % error. 8% MAPE means forecasts are off by 8% on average.</td><td>Evaluating model fit on training data only; never testing on held-out future periods.</td></tr>
+          <tr><td><strong>Classification (general)</strong></td><td>Cost-weighted confusion matrix</td><td>Weights FP and FN errors by their actual business cost asymmetry.</td><td>Using a standard F1 score when FP and FN costs are not equal.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="flag-item"><div class="flag-icon">🚩</div><div><div class="flag-title">Only training R² is reported</div><div class="flag-body">Any model report that shows only in-sample performance is either incomplete or misleading. Always ask: "What is the test or cross-validated performance?" If unavailable, the model has not been validated.</div></div></div>
+      <div class="flag-item"><div class="flag-icon">🚩</div><div><div class="flag-title">Accuracy on an imbalanced dataset</div><div class="flag-body">"Our model is 97% accurate" on a fraud dataset where 97% of transactions are legitimate is a null model. Ask for precision and recall on the minority (fraud) class.</div></div></div>
+      <div class="flag-item"><div class="flag-icon">🚩</div><div><div class="flag-title">Statistically significant but economically trivial</div><div class="flag-body">A β with p &lt; 0.001 on a large dataset may represent an effect too small to act on operationally. Always ask: "What is the practical magnitude, and does it justify the cost of acting on it?"</div></div></div>
+      <div class="flag-item"><div class="flag-icon">🚩</div><div><div class="flag-title">Forecasts without uncertainty ranges</div><div class="flag-body">A single-number forecast is a false precision claim. Always include confidence intervals and explain what assumptions widen or narrow them.</div></div></div>
+    </div>
+
+    <div id="p5-quiz" class="tab-panel">
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 1 of 2</span>A model predicting high-risk insurance applicants achieves: Train accuracy = 94.2%, Test accuracy = 91.8%, AUC-ROC = 0.73. Base rate of high-risk applicants = 6%. What is your primary analytical concern?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p5q1')"><span class="opt-letter">A</span>The 2.4% train-test gap indicates severe overfitting</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p5q1')"><span class="opt-letter">B</span>AUC of 0.73 is too low — models must exceed 0.85 before any deployment</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p5q1')"><span class="opt-letter">C</span>With 6% base rate, predicting "low risk" for every applicant achieves 94% accuracy — the 91.8% test accuracy may not meaningfully exceed this naïve baseline, making accuracy a misleading metric here</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p5q1')"><span class="opt-letter">D</span>The model is ready — 91.8% holdout accuracy is strong for any high-stakes domain</div>
+        </div>
+        <div class="quiz-feedback" id="p5q1">✓ Correct. This is the class imbalance trap. With 6% base rate, a naïve classifier predicting "low risk" for everyone achieves 94% accuracy — outperforming this model's 91.8%! The accuracy metric is measuring near-zero signal. The AUC of 0.73 is more informative — it shows some discriminatory power — but the confusion matrix is what matters most. You need to see: of the 6% truly high-risk applicants, how many does the model correctly identify (recall)? If recall on high-risk = 40%, the model misses 60% of the applicants it was built to catch — a regulatory and financial liability. Always compute precision/recall on the minority class, never rely on overall accuracy with imbalanced outcomes.</div>
+      </div>
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 2 of 2</span>Your Summit Health pricing model shows Train R² = 0.94, Test R² = 0.57. You plan to price 200,000 policies next quarter. What is the correct recommendation?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p5q2')"><span class="opt-letter">A</span>Proceed — the model explains 94% of variance and the test performance will improve with more data</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p5q2')"><span class="opt-letter">B</span>Average the two R² values (0.755) and report that as the model's expected real-world performance</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p5q2')"><span class="opt-letter">C</span>Flag as severe overfitting — the model is not deployment-ready; pursue regularization, feature reduction, or leakage investigation before any policy pricing</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p5q2')"><span class="opt-letter">D</span>Re-run the model including test data in training to improve the test R²</div>
+        </div>
+        <div class="quiz-feedback" id="p5q2">✓ Correct. A gap of 0.37 between train and test R² is a textbook case of severe overfitting. The model has learned noise patterns in the training data that do not exist in the real population. Deploying it to price 200,000 health policies would create systematic mispricings — some policies underpriced (adverse selection risk) and others overpriced (competitive loss). The correct next steps: (1) check for data leakage, (2) apply L1/L2 regularization (Ridge/Lasso), (3) reduce feature count and re-evaluate via cross-validation, (4) consider gathering more training data. Option D — including test data in training — is never acceptable. It eliminates the holdout set entirely and makes final performance evaluation impossible. The test set must remain untouched until the model is finalized.</div>
+      </div>
+    </div>
+
+    <div class="part-nav">
+      <button class="nav-btn" onclick="showPart('part4')">← Previous</button>
+      <button class="nav-btn primary" onclick="showPart('part6')">Next: Course Wrap-Up →</button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!--  PART 6 — Wrap-Up & Quiz                                     -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section id="part6" class="part-section">
+    <div class="part-header">
+      <div>
+        <div class="part-eyebrow">Review · Knowledge Check · 5 Points</div>
+        <div class="part-title">Course Wrap-Up &amp; Synthesis</div>
+        <div class="part-desc">Consolidate your Section 6 understanding. Five applied graduate-level questions before submission.</div>
+      </div>
+      <div class="part-points">5 pts</div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showTab('p6','framework')">Decision Framework</button>
+      <button class="tab-btn" onclick="showTab('p6','redflags')">5 Red Flags</button>
+      <button class="tab-btn" onclick="showTab('p6','quiz')">Knowledge Check</button>
+    </div>
+
+    <div id="p6-framework" class="tab-panel active">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">The goal of BUAN 631 is not to make you a statistician. It is to make you a manager who can ask rigorous analytical questions, interpret model outputs confidently, and know when to trust — or challenge — a model's recommendations.</p>
+      <table class="compare-table">
+        <thead><tr><th>Situation</th><th>Technique</th><th>Key output</th><th>Must validate</th></tr></thead>
+        <tbody>
+          <tr><td>Multiple drivers → continuous outcome</td><td><strong>Multiple linear regression</strong></td><td>Partial coefficients, prediction intervals, R²</td><td>LINE assumptions, VIF, robust SEs if heteroskedastic</td></tr>
+          <tr><td>Multiple drivers → binary outcome</td><td><strong>Logistic regression</strong></td><td>Probability score, odds ratios, threshold-dependent classification</td><td>AUC, calibration (HL test), cost-optimized threshold</td></tr>
+          <tr><td>Outcome evolves sequentially over time</td><td><strong>ARIMA / SARIMA</strong></td><td>Point forecasts + CIs, seasonal decomposition</td><td>ADF stationarity, Ljung-Box white noise, temporal holdout MAPE</td></tr>
+          <tr><td>Model ready for deployment?</td><td><strong>Validation framework</strong></td><td>Train vs. test gap, cross-validated performance, confusion matrix</td><td>Leakage check, class balance, cost-weighted metrics</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="p6-redflags" class="tab-panel">
+      <p style="font-size:14px;margin-bottom:1.25rem;color:var(--muted)">Every MBA analyst should be able to recognize these five patterns — in their own work and in analyses presented to them by their data teams.</p>
+      <div class="flag-item"><div class="flag-icon">🚩</div><div><div class="flag-title">Red flag 1 — Only training performance is reported</div><div class="flag-body">Any model report showing only in-sample R² or accuracy has not been validated. Ask immediately: "What is the holdout or cross-validated performance?" This is non-negotiable before deployment.</div></div></div>
+      <div class="flag-item"><div class="flag-icon">🚩</div><div><div class="flag-title">Red flag 2 — Accuracy on an imbalanced dataset</div><div class="flag-body">"97% accurate" on a fraud dataset where 97% of transactions are legitimate is a null model. Always ask for precision and recall on the minority class. Overall accuracy is misleading when classes are unbalanced.</div></div></div>
+      <div class="flag-item"><div class="flag-icon">🚩</div><div><div class="flag-title">Red flag 3 — Single-number forecasts without uncertainty</div><div class="flag-body">A forecast without a confidence interval is a false precision claim. Uncertainty compounds over longer horizons. Stakeholders who receive only point estimates tend to over-rely on them.</div></div></div>
+      <div class="flag-item"><div class="flag-icon">🚩</div><div><div class="flag-title">Red flag 4 — Statistical significance confused with practical importance</div><div class="flag-body">A β with p &lt; 0.001 on a 50,000-row dataset can represent an effect too tiny to matter operationally. Always ask: "What is the effect size in business units, and does it justify the cost of acting on it?" p-value and effect size are independent.</div></div></div>
+      <div class="flag-item"><div class="flag-icon">🚩</div><div><div class="flag-title">Red flag 5 — Correlation presented as causation</div><div class="flag-body">Regression identifies associations. Claiming that X "causes" Y requires experimental design (randomized control trial) or a credible natural experiment. A positive coefficient on advertising spend does not prove advertising caused the revenue lift — confounds remain until controlled.</div></div></div>
+    </div>
+
+    <div id="p6-quiz" class="tab-panel">
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 1 of 3</span>A model report states: "Our logistic regression achieves 96% accuracy on the held-out test set. The model is ready for deployment." The dataset has 4% base rate of positive outcomes. What should you conclude?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p6q1')"><span class="opt-letter">A</span>The model is ready — 96% holdout accuracy is excellent for any application</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p6q1')"><span class="opt-letter">B</span>This report is incomplete — a naïve model predicting "negative" for all instances achieves 96% accuracy; AUC, precision, and recall on the positive class are required before any deployment decision</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p6q1')"><span class="opt-letter">C</span>The model likely overfits — high accuracy on holdout data is a sign of data leakage</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p6q1')"><span class="opt-letter">D</span>The model needs more training data before the accuracy figure is meaningful</div>
+        </div>
+        <div class="quiz-feedback" id="p6q1">✓ Correct. With a 4% positive base rate, a model that predicts "negative" for every single observation achieves 96% accuracy without learning anything. The accuracy metric provides zero information about model quality here. The required metrics: (1) AUC-ROC — discriminatory power independent of threshold, (2) Precision on positives — what fraction of predicted positives are real, (3) Recall on positives — what fraction of all true positives did the model catch. A model with 96% accuracy but 20% recall is missing 80% of the outcomes it was built to find — that's not "ready for deployment," it's a false-negative machine.</div>
+      </div>
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 2 of 3</span>An executive shows you a regression analysis showing that companies with more social media followers have higher revenue, with β = +$450 per follower, R² = 0.71, p &lt; 0.001. She concludes: "We should invest $2M in a follower acquisition campaign." What is the analytical concern?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p6q3')"><span class="opt-letter">A</span>The R² of 0.71 is too low to support a $2M decision</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p6q3')"><span class="opt-letter">B</span>The p-value is significant so the coefficient is reliable for budget planning</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p6q3')"><span class="opt-letter">C</span>This is an observational association, not a causal relationship — large companies have both more revenue and more followers; the coefficient may reflect size confounding rather than a real lever. A causal claim requires experimental or quasi-experimental evidence.</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p6q3')"><span class="opt-letter">D</span>The model needs additional variables like industry and geography before the β can be trusted</div>
+        </div>
+        <div class="quiz-feedback" id="p6q3">✓ Correct. This is the correlation-causation trap at its most common in business settings. Larger companies have both more revenue and more social media followers — both are likely caused by a third variable (company size, brand maturity, marketing budget). The regression coefficient captures this confounded association. Buying followers does not make you a larger company; it just changes one symptom without addressing the underlying driver. The $2M decision requires causal evidence: a randomized experiment where follower count is randomly varied while controlling for size, or a natural experiment (e.g., a platform policy change that arbitrarily affected follower counts for some companies but not others). Observational regression alone never justifies a causal resource allocation claim.</div>
+      </div>
+      <div class="quiz-block">
+        <div class="quiz-q"><span class="q-num">Question 3 of 3</span>You are reviewing a demand forecasting model for a retail chain. The analyst reports MAPE = 6.2% on the training data. The model will be used to commit to 12-month supply contracts. What validation gap must you close before approving the model for this use?</div>
+        <div class="quiz-opts">
+          <div class="quiz-opt" onclick="doQ(this,'w','p6q2')"><span class="opt-letter">A</span>Nothing — MAPE of 6.2% is excellent and training performance is sufficient for long-range supply commitments</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p6q2')"><span class="opt-letter">B</span>Convert MAPE to RMSE — RMSE is the appropriate metric for supply chain applications</div>
+          <div class="quiz-opt" onclick="doQ(this,'r','p6q2')"><span class="opt-letter">C</span>The MAPE is in-sample only — you must evaluate holdout MAPE on future periods (temporal holdout) to know whether the model generalizes forward in time before committing 12-month contracts to its forecasts</div>
+          <div class="quiz-opt" onclick="doQ(this,'w','p6q2')"><span class="opt-letter">D</span>Expand the training data to the full historical period and re-report MAPE before committing</div>
+        </div>
+        <div class="quiz-feedback" id="p6q2">✓ Correct. Training MAPE tells you how well the model fits data it has already seen — a prerequisite but not a sufficient condition for deployment. For a time-series model, the only valid validation is a temporal holdout: train on early periods, test on the most recent periods you actually have (e.g., hold out the last 6–12 months). This simulates exactly the real-world task — predicting future periods from past ones. Shuffled cross-validation is inappropriate for time-series because it leaks future information into training folds. A 6.2% training MAPE that becomes 18% on a 6-month temporal holdout reveals a model that has overfit to historical noise patterns rather than learning the true demand structure. Only temporal holdout MAPE is relevant for approving 12-month supply contract commitments.</div>
+      </div>
+    </div>
+
+    <div class="part-nav">
+      <button class="nav-btn" onclick="showPart('part5')">← Previous</button>
+      <button class="nav-btn primary" onclick="alert('Module complete! Submit your homework on Canvas.')">Submit Module ✓</button>
+    </div>
+  </section>
+  </main>
+
+</div><!-- end page-layout -->
+
+<script>
+var partOrder=['part1','part2','part3','part4','part5','part6'];
+var p4ChartInst=null;
+
+function showPart(id){
+  document.querySelectorAll('.part-section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach((el,i)=>{
+    el.classList.toggle('active', partOrder[i]===id);
+  });
+  var idx=partOrder.indexOf(id)+1;
+  document.getElementById('prog-label').textContent=idx+' / 6';
+  document.getElementById('prog-fill').style.width=Math.round(idx/6*100)+'%';
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='part4'){
+    var activeP4Tab=document.querySelector('#tab-p4-forecast, [id$="p4-forecast"]');
+    setTimeout(drawP4,100);
+  }
+}
+
+function showTab(prefix, tabId){
+  var container=document.querySelector('#'+prefix+'-'+tabId)?.closest('.part-section')||document.getElementById('tab-'+prefix);
+  var allPanels=document.querySelectorAll('[id^="'+prefix+'-"].tab-panel');
+  var allBtns=document.querySelectorAll('.part-section.active .tab-btn');
+  allPanels.forEach(p=>p.classList.remove('active'));
+  allBtns.forEach(b=>b.classList.remove('active'));
+  var target=document.getElementById(prefix+'-'+tabId);
+  if(target){target.classList.add('active');}
+  event.target.classList.add('active');
+  if(prefix==='p4'&&tabId==='forecast')setTimeout(drawP4,60);
+}
+
+function doQ(el,cr,id){
+  var block=el.closest('.quiz-block');
+  block.querySelectorAll('.quiz-opt').forEach(o=>{o.style.pointerEvents='none';});
+  el.classList.add(cr==='r'?'correct':'incorrect');
+  el.querySelector('.opt-letter').textContent=cr==='r'?'✓':'✗';
+  var fb=document.getElementById(id);
+  if(fb){fb.className='quiz-feedback show '+(cr==='r'?'correct':'incorrect');}
+}
+
+/* ── Part 2 simulator ── */
+function calcP2(){
+  var ad=+document.getElementById('p2-ad').value;
+  var dd=+document.getElementById('p2-dd').value;
+  var ft=+document.getElementById('p2-ft').value;
+  var ur=+document.getElementById('p2-ur').value;
+  var hw=+document.getElementById('p2-hw').value;
+  document.getElementById('p2-ad-o').textContent='$'+ad.toLocaleString();
+  document.getElementById('p2-dd-o').textContent=dd+'%';
+  document.getElementById('p2-ft-o').textContent=ft.toLocaleString();
+  document.getElementById('p2-ur-o').textContent=parseFloat(ur).toFixed(1)+'%';
+  document.getElementById('p2-hw-o').textContent=hw?'Yes':'No';
+  var rev=38420+4.10*ad+1580*dd+0.71*ft-820*ur+12400*hw;
+  document.getElementById('p2-res').textContent='$'+Math.round(rev).toLocaleString();
+  var lo=Math.round((rev-4210*1.96)/1000*10)/10;
+  var hi=Math.round((rev+4210*1.96)/1000*10)/10;
+  document.getElementById('p2-ci').textContent='95% prediction interval: [$'+lo+'k – $'+hi+'k]';
+  var parts=[
+    {label:'Ad spend',val:Math.round(4.10*ad),color:'#185FA5'},
+    {label:'Discount depth',val:Math.round(1580*dd),color:'#0F6E56'},
+    {label:'Foot traffic',val:Math.round(0.71*ft),color:'#854F0B'},
+    {label:'Holiday',val:Math.round(12400*hw),color:'#534AB7'},
+    {label:'Unemployment',val:Math.round(-820*ur),color:'#8b0000'},
+  ];
+  var maxV=Math.max(...parts.map(p=>Math.abs(p.val)));
+  document.getElementById('p2-bars').innerHTML=parts.map(p=>`
+    <div class="contrib-row">
+      <div class="contrib-label">${p.label}</div>
+      <div class="contrib-track"><div class="contrib-fill" style="width:${Math.round(Math.abs(p.val)/maxV*100)}%;background:${p.color}"></div></div>
+      <div class="contrib-val ${p.val>=0?'pos':'neg'}">${p.val>=0?'+':''}$${Math.abs(p.val).toLocaleString()}</div>
+    </div>`).join('');
+}
+
+/* ── Part 3 churn calculator ── */
+function calcP3(){
+  var ten=+document.getElementById('p3-ten').value;
+  var tkt=+document.getElementById('p3-tkt').value;
+  var dsl=+document.getElementById('p3-dsl').value;
+  var plt=+document.getElementById('p3-plt').value;
+  var sts=+document.getElementById('p3-sts').value;
+  var pf=+document.getElementById('p3-pf').value;
+  document.getElementById('p3-ten-o').textContent=ten+' mo';
+  document.getElementById('p3-tkt-o').textContent=tkt;
+  document.getElementById('p3-dsl-o').textContent=dsl+'d';
+  document.getElementById('p3-plt-o').textContent=plt===0?'Basic':'Pro';
+  document.getElementById('p3-sts-o').textContent=sts;
+  document.getElementById('p3-pf-o').textContent=pf?'Yes':'No';
+  var z=-1.82+(-0.048*ten)+(0.214*tkt)+(0.038*dsl)+(-0.712*plt)+(-0.031*sts)+(1.143*pf);
+  var prob=Math.round(100/(1+Math.exp(-z)));
+  document.getElementById('p3-res').textContent=prob+'%';
+  var bar=document.getElementById('p3-bar');
+  bar.style.width=prob+'%';
+  bar.style.background=prob>=50?'#8b0000':prob>=30?'#7a4a00':'#1a6b2e';
+  var rt=document.getElementById('p3-risk-txt');
+  rt.textContent=prob>=50?'High risk — recommend proactive save offer':prob>=30?'Moderate risk — flag for monitoring':'Low risk — standard retention cadence';
+}
+
+/* ── Part 3 threshold optimizer ── */
+function calcThr3(){
+  var thr=+document.getElementById('p3-thr').value;
+  document.getElementById('p3-thr-o').textContent=thr+'%';
+  var tp=Math.round(180*(1-Math.pow(thr/100,0.55)));
+  var fn=180-tp;
+  var fp=Math.round(820*Math.pow(1-thr/100,1.75));
+  document.getElementById('p3-tp').textContent=tp;
+  document.getElementById('p3-fn').textContent=fn;
+  document.getElementById('p3-fp').textContent=fp;
+  var cost=fn*1200+fp*30;
+  document.getElementById('p3-cost').textContent='$'+cost.toLocaleString();
+  document.getElementById('p3-thr-cost').textContent='$'+cost.toLocaleString();
+  var msg=thr<=30?'Lower threshold — maximizing recall; FN cost dominates the calculus':thr>=60?'Higher threshold — fewer contacts but high FN cost risk':'Default threshold — suboptimal given 40:1 cost asymmetry';
+  document.getElementById('p3-thr-msg').textContent=msg;
+}
+
+/* ── Part 4 forecast chart ── */
+function drawP4(){
+  var tpct=parseFloat(document.getElementById('p4-trnd').value);
+  var samp=parseFloat(document.getElementById('p4-samp').value)/100;
+  var fhor=parseInt(document.getElementById('p4-fhor').value);
+  document.getElementById('p4-trnd-o').textContent=tpct.toFixed(1)+'%';
+  document.getElementById('p4-samp-o').textContent=Math.round(samp*100)+'%';
+  document.getElementById('p4-fhor-o').textContent=fhor+' mo';
+  var hist=18;var total=hist+fhor;
+  var noise=[2.1,-1.5,0.9,-2.3,1.7,-0.8,1.4,-1.9,2.5,-0.6,1.2,-2.0,1.8,-1.1,0.7,-2.4,1.5,-0.9];
+  var labels=[],hData=[],fData=[],ciU=[],ciL=[];
+  var base=100;
+  for(var i=0;i<total;i++){
+    var mo=(i%12);
+    var lbl=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mo];
+    var yr=2023+Math.floor(i/12);
+    labels.push(lbl+' '+yr);
+    var trend=base*Math.pow(1+tpct/100,i/3);
+    var season=trend*samp*Math.sin((mo/12*2*Math.PI)-Math.PI/2);
+    if(i<hist){hData.push(Math.round((trend+season+(noise[i]||0))*10)/10);fData.push(null);ciU.push(null);ciL.push(null);}
+    else{hData.push(null);var fv=trend+season;var ci=fv*0.03*(i-hist+1);fData.push(Math.round(fv*10)/10);ciU.push(Math.round((fv+ci)*10)/10);ciL.push(Math.round((fv-ci)*10)/10);}
+  }
+  fData[hist-1]=hData[hist-1];
+  var ctx=document.getElementById('p4Canvas');
+  if(!ctx)return;
+  if(p4ChartInst){p4ChartInst.destroy();}
+  p4ChartInst=new Chart(ctx,{
+    type:'line',
+    data:{labels:labels,datasets:[
+      {label:'Historical',data:hData,borderColor:'#570C0F',borderWidth:2.5,pointRadius:2.5,pointBackgroundColor:'#570C0F',tension:0.35,fill:false},
+      {label:'Forecast',data:fData,borderColor:'#C8A84B',borderWidth:2,borderDash:[6,4],pointRadius:2,pointBackgroundColor:'#C8A84B',tension:0.35,fill:false},
+      {label:'CI upper',data:ciU,borderColor:'rgba(0,0,0,0)',pointRadius:0,fill:'+1',backgroundColor:'rgba(200,168,75,0.2)',tension:0.35},
+      {label:'CI lower',data:ciL,borderColor:'rgba(0,0,0,0)',pointRadius:0,fill:false,tension:0.35}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toFixed(1)}}},
+      scales:{
+        x:{ticks:{font:{size:10},maxRotation:45,autoSkip:true,color:'#888'},grid:{color:'rgba(0,0,0,0.05)'}},
+        y:{ticks:{font:{size:11},color:'#888',callback:v=>v.toFixed(0)},grid:{color:'rgba(0,0,0,0.05)'}}
+      }
+    }
+  });
+}
+
+/* ── Part 5 validation simulator ── */
+function calcP5(){
+  var comp=+document.getElementById('p5-comp').value;
+  var sz=+document.getElementById('p5-sz').value;
+  document.getElementById('p5-comp-o').textContent=comp;
+  document.getElementById('p5-sz-o').textContent=sz.toLocaleString();
+  var ratio=comp/sz;
+  var trainR2=Math.min(0.985,0.82+comp*0.007);
+  var gap=Math.max(0.008,ratio*20+Math.max(0,(comp-12)*0.016));
+  var testR2=Math.max(0.15,trainR2-gap);
+  var actualGap=trainR2-testR2;
+  document.getElementById('p5-tr').textContent=trainR2.toFixed(3);
+  document.getElementById('p5-te').textContent=testR2.toFixed(3);
+  document.getElementById('p5-rmse').textContent='$'+Math.round(3000+actualGap*18000).toLocaleString();
+  document.getElementById('p5-gap').textContent=actualGap.toFixed(3);
+  var gEl=document.getElementById('p5-gap');
+  var nEl=document.getElementById('p5-gap-n');
+  var msg=document.getElementById('p5-msg');
+  var vrd=document.getElementById('p5-verdict');
+  if(actualGap<0.05){gEl.style.color='#1a6b2e';nEl.textContent='Acceptable';msg.textContent='Model generalizes well; train ≈ test';vrd.textContent='Ready to deploy';}
+  else if(actualGap<0.12){gEl.style.color='#7a4a00';nEl.textContent='Moderate — investigate';msg.textContent='Consider regularization or feature reduction';vrd.textContent='Needs investigation';}
+  else{gEl.style.color='#8b0000';nEl.textContent='Severe — overfit detected';msg.textContent='Do not deploy — remediate overfitting first';vrd.textContent='Do not deploy';}
+}
+
+/* init */
+calcP2();calcP3();calcThr3();calcP5();
+setTimeout(drawP4,300);
+</script>
+</body>
+</html>
